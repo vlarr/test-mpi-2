@@ -81,53 +81,64 @@ def read_or_receive_data(comm, rank, mx_r_file_name, arr_m_file_name):
     return mx_r, arr_m
 
 
-def process_data_part(rank, size, mx_r, arr_m):
+def calc_part_border(rank, rank_size, data_size):
+    part_i_min = int((rank * data_size) / rank_size)
+    part_i_max = int(((rank + 1) * data_size) / rank_size)
+    part_size = part_i_max - part_i_min
+    return part_i_min, part_i_max, part_size
+
+
+def fill_part_mx_f(rank, rank_size, mx_r, arr_m):
     data_size = len(mx_r)
-    data_part_i_min = int((rank * data_size) / size)
-    data_part_i_max = int(((rank + 1) * data_size) / size)
-    log.info(f'process part: [{data_part_i_min}, {data_part_i_max}], data_size = {data_size}')
+    part_i_min, part_i_max, part_size = calc_part_border(rank, rank_size, data_size)
+    log.info(f'fill part: [{part_i_min}, {part_i_max}], part_size = {part_size}, data_size = {data_size}')
 
-    mx_f = np.array([[0.0, 0.0, 0.0]] * data_size)
-    for i in range(data_part_i_min, data_part_i_max):
-        mx_f[i] = calc_Fv_sum(i, mx_r, arr_m)
-    log.debug(f'mx_F =\n{mx_f}')
+    part_mx_f = np.array([[0.0, 0.0, 0.0]] * part_size)
+    for i in range(part_size):
+        part_mx_f[i] = calc_Fv_sum(part_i_min + i, mx_r, arr_m)
+    log.debug(f'part_mx_f =\n{part_mx_f}')
 
-    return data_part_i_min, data_part_i_max, mx_f
+    return part_mx_f
 
 
-def gather_results(comm, rank, size, mx_f):
-    send_buff = mx_f
-    recv_buff = None
-
+def gather_parts(comm, rank, rank_size, mx_r_size, mx_f):
     if rank == 0:
-        recv_buff = np.zeros((size, len(mx_f), 3))
+        #   Количество точек для расчётов может отличаться в разных потоках, но не более чем на 1.
+        #   Поэтому подготавливаем буфер с запасом
+        recv_buff_max_size = int((mx_r_size / rank_size) + 1)
+        recv_buff = np.zeros((rank_size, recv_buff_max_size, 3))
+    else:
+        recv_buff = None
 
-    comm.Gather(send_buff, recv_buff, root=0)
-    log.info('completion gather parts')
+    log.info('start gather parts')
+    comm.Gather(mx_f, recv_buff, root=0)
 
     if rank == 0:
         log.debug(f'recv_buff =\n{recv_buff}')
-        result = np.zeros((len(mx_f), 3))
-        for i in range(size):
-            result = np.add(result, recv_buff[i])
-
+        result = np.zeros((0, 3))
+        for i in range(rank_size):
+            #   Нам нужен актуальный размер части данных. Обрезаем конец матрицы (заполненный мусором)
+            i_min, i_max, part_size = calc_part_border(i, rank_size, mx_r_size)
+            log.info(
+                f'gather for rank = {i}, part = [{i_min}, {i_max}], part_size = {part_size}, data_size = {mx_r_size}')
+            mx_f_part = recv_buff[i][:part_size]
+            result = np.concatenate((result, mx_f_part), axis=0)
         return result
     else:
         return None
 
 
-def save_result(output_file_name, result_mx_f):
+def save_result(output_file_name, mx_f):
     log.info(f'save results to: \"{output_file_name}\"')
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, 'wb') as file:
-        numpy.savetxt(file, result_mx_f, delimiter=',\t')
+        numpy.savetxt(file, mx_f, delimiter=',\t')
 
 
-def process(comm, rank, size, mx_r_file_name, arr_m_file_name, output_file_name):
+def process(comm, rank, rank_size, mx_r_file_name, arr_m_file_name, output_file_name):
     mx_r, arr_m = read_or_receive_data(comm, rank, mx_r_file_name, arr_m_file_name)
-    i_min, i_max, mx_f = process_data_part(rank, size, mx_r, arr_m)
-    result_mx_f = gather_results(comm, rank, size, mx_f)
-
+    part_mx_f = fill_part_mx_f(rank, rank_size, mx_r, arr_m)
+    result_mx_f = gather_parts(comm, rank, rank_size, len(mx_r), part_mx_f)
     if rank == 0:
         log.debug(f'result_mx_f =\n{result_mx_f}')
         save_result(output_file_name, result_mx_f)
@@ -137,7 +148,7 @@ if __name__ == '__main__':
     args = parse_args()
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    size = comm.Get_size()
+    rank_size = comm.Get_size()
 
     configure_log(args, rank)
 
@@ -148,4 +159,4 @@ if __name__ == '__main__':
         log.warning(f"Файл по пути \"{args.source_m}\" не найден")
         exit(1)
 
-    process(comm, rank, size, args.source_r, args.source_m, args.output)
+    process(comm, rank, rank_size, args.source_r, args.source_m, args.output)

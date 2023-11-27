@@ -15,12 +15,12 @@ def calc_rv(v_i, v_j):
 
 
 def calc_Fs_ij(i, j, mx_r, arr_m, f_coef=F_coef_default):
-    """Вычисление скаляра сылы взаомодействия между точками с номерами i и j"""
+    """Вычисление скаляра силы взаимодействия между точками с номерами i и j"""
     return (f_coef * arr_m[i] * arr_m[j]) / pow2_dist(mx_r[i], mx_r[j])
 
 
 def calc_Fv_ij(i, j, mx_r, arr_m, f_coef=F_coef_default):
-    """Вычисление вектора сылы взаомодействия между точками с номерами i и j"""
+    """Вычисление вектора силы взаимодействия между точками с номерами i и j"""
     f_scalar = calc_Fs_ij(i, j, mx_r, arr_m, f_coef)
     r_vect = calc_rv(mx_r[i], mx_r[j])
     return np.multiply(f_scalar, r_vect)
