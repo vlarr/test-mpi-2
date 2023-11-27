@@ -1,10 +1,6 @@
-import logging
-
 import numpy as np
 
 F_coef_default = 10.0
-
-log = logging.getLogger()
 
 
 def pow2_dist(v_i, v_j):
@@ -27,7 +23,6 @@ def calc_Fv_ij(i, j, mx_r, arr_m, f_coef=F_coef_default):
 
 
 def calc_Fv_sum(i, mx_r, arr_m, f_coef=F_coef_default):
-    log.debug(f'call calc_Fv_sum: {i}, {mx_r}, {arr_m}, {f_coef}')
     arr_F_ij = np.zeros(3, float)
     for j in range(len(mx_r)):
         if j != i:
