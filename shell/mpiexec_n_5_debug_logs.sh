@@ -1,0 +1,1 @@
+mpiexec -n 5 python ../main.py --debug --logs=../logs ../data/example/mx_r-data.csv ../data/example/arr_m-data.csv ../output/result-n_5.csv

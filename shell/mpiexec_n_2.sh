@@ -1,0 +1,1 @@
+mpiexec -n 2 python ../main.py ../data/example/mx_r-data.csv ../data/example/arr_m-data.csv ../output/result-n_2.csv

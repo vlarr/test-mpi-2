@@ -46,7 +46,7 @@ def configure_log(args, rank):
 def load_matrix_r_from_csv(file_name):
     log.info(f'load matrix_r from \"{file_name}\"')
     with open(file_name, newline='') as csv_file:
-        reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+        reader = csv.reader(csv_file, delimiter=',', skipinitialspace=True)
         mx_r = np.array([[float(cell) for cell in row] for row in reader])
 
     log.info(f'read {len(mx_r)} rows')
@@ -57,7 +57,7 @@ def load_matrix_r_from_csv(file_name):
 def load_array_mass_from_csv(file_name):
     log.info(f'load array_mass from \"{file_name}\"')
     with open(file_name, newline='') as csv_file:
-        reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+        reader = csv.reader(csv_file, delimiter=',', skipinitialspace=True)
         arr_m = np.array([float(row[0]) for row in reader])
 
     log.info(f'read {len(arr_m)} rows')
@@ -120,7 +120,7 @@ def save_result(output_file_name, result_mx_f):
     log.info(f'save results to: \"{output_file_name}\"')
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, 'wb') as file:
-        numpy.savetxt(file, result_mx_f, delimiter='\t')
+        numpy.savetxt(file, result_mx_f, delimiter=',\t')
 
 
 def process(comm, rank, size, mx_r_file_name, arr_m_file_name, output_file_name):

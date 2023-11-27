@@ -4,9 +4,6 @@ __pycache__/
 
 .idea
 
-logs
-
 data
-!data/example
-
+logs
 output
