@@ -9,7 +9,7 @@ def pow2_dist(v_i, v_j):
 
 
 def calc_rv(v_i, v_j):
-    """Вычисление радиус-вектора между точками"""
+    """Вычисление единичного вектора направления между точками"""
     dist = pow2_dist(v_i, v_j) ** 0.5
     return np.array([(v_j[axis] - v_i[axis]) / dist for axis in [0, 1, 2]])
 
